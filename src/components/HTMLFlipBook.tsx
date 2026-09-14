@@ -22,6 +22,11 @@ interface HTMLFlipBookProps {
   maxShadowOpacity?: number;
   showCover?: boolean;
   mobileScrollSupport?: boolean;
+  clickEventForward?: boolean;
+  useMouseEvents?: boolean;
+  swipeDistance?: number;
+  showPageCorners?: boolean;
+  disableFlipByClick?: boolean;
   className?: string;
   style?: React.CSSProperties;
   children: React.ReactNode;
@@ -65,6 +70,11 @@ export const HTMLFlipBook = forwardRef<FlipBookRef, HTMLFlipBookProps>(
           maxShadowOpacity: props.maxShadowOpacity || 0.4,
           showCover: props.showCover ?? true,
           mobileScrollSupport: props.mobileScrollSupport ?? false,
+          clickEventForward: props.clickEventForward ?? true,
+          useMouseEvents: props.useMouseEvents ?? true,
+          swipeDistance: props.swipeDistance ?? 60,
+          showPageCorners: props.showPageCorners ?? false,
+          disableFlipByClick: props.disableFlipByClick ?? true,
         });
 
         pf.loadFromHTML(elements);

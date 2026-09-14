@@ -574,6 +574,8 @@ body {
   overflow-y: auto;
   padding-right: 4px;
   margin-bottom: 6px;
+  position: relative;
+  z-index: 10;
   touch-action: pan-y !important;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
@@ -595,6 +597,8 @@ body {
   padding: 2px 0;
   cursor: pointer;
   transition: opacity 0.2s ease;
+  position: relative;
+  z-index: 11;
   touch-action: pan-y !important;
 }
 
@@ -607,6 +611,8 @@ body {
   accent-color: var(--accent-terracotta);
   margin-right: 6px;
   cursor: pointer;
+  width: 15px;
+  height: 15px;
 }
 
 .instructions-timeline {
@@ -617,6 +623,8 @@ body {
   padding-right: 6px;
   max-height: 220px;
   flex: 1;
+  position: relative;
+  z-index: 10;
   touch-action: pan-y !important;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;

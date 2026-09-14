@@ -304,7 +304,11 @@ export const App: React.FC = () => {
           flippingTime={700}
           usePortrait={bookDimensions.isMobile}
           showCover={true}
-          mobileScrollSupport={true}
+          mobileScrollSupport={false}
+          disableFlipByClick={true}
+          showPageCorners={false}
+          swipeDistance={60}
+          clickEventForward={true}
           onFlip={handleFlip}
           className="cookbook-flipbook"
         >
