@@ -574,6 +574,9 @@ body {
   overflow-y: auto;
   padding-right: 4px;
   margin-bottom: 6px;
+  touch-action: pan-y !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .ingredients-list::-webkit-scrollbar {
@@ -592,6 +595,7 @@ body {
   padding: 2px 0;
   cursor: pointer;
   transition: opacity 0.2s ease;
+  touch-action: pan-y !important;
 }
 
 .ingredient-item.checked {
@@ -613,6 +617,9 @@ body {
   padding-right: 6px;
   max-height: 220px;
   flex: 1;
+  touch-action: pan-y !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Custom scrollbar for instructions */

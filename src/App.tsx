@@ -341,14 +341,23 @@ export const App: React.FC = () => {
           <div className="page-item" data-density="hard">
             <div className="page-inner">
               <h2 className="toc-title">Mục Lục Thực Đơn</h2>
-              <div className="toc-list">
+              <div
+                className="toc-list"
+                onPointerDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+              >
                 {recipes.map((recipe, idx) => {
                   const targetPage = 2 + idx * 2;
                   return (
                     <div
                       key={recipe.id}
                       className="toc-item"
-                      onClick={() => turnToPage(targetPage)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        turnToPage(targetPage);
+                      }}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
                     >
                       <span className="toc-item-title">
                         {recipe.vietnameseTitle}
@@ -459,7 +468,11 @@ export const App: React.FC = () => {
                     <ChefHat size={16} className="text-amber-700" />
                     <span>Nguyên liệu ({recipe.ingredients.length})</span>
                   </h4>
-                  <ul className="ingredients-list">
+                  <ul
+                    className="ingredients-list"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                  >
                     {recipe.ingredients.map((ing, iIdx) => {
                       const itemKey = `${recipe.id}-${iIdx}`;
                       const isChecked = !!checkedIngredients[itemKey];
@@ -467,9 +480,15 @@ export const App: React.FC = () => {
                         <li
                           key={itemKey}
                           className={`ingredient-item ${isChecked ? "checked" : ""}`}
-                          onClick={() => toggleIngredient(itemKey)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleIngredient(itemKey);
+                          }}
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onTouchStart={(e) => e.stopPropagation()}
                         >
                           <label
+                            onClick={(e) => e.stopPropagation()}
                             style={{
                               display: "flex",
                               alignItems: "center",
@@ -483,7 +502,11 @@ export const App: React.FC = () => {
                             <input
                               type="checkbox"
                               checked={isChecked}
-                              onChange={() => {}}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                toggleIngredient(itemKey);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
                             />
                             <span>{ing.name}</span>
                           </label>
@@ -507,7 +530,11 @@ export const App: React.FC = () => {
                     <BookOpen size={16} className="text-amber-700" />
                     <span>Các bước thực hiện</span>
                   </h4>
-                  <div className="instructions-timeline">
+                  <div
+                    className="instructions-timeline"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                  >
                     {recipe.instructions.map((step) => {
                       return (
                         <div key={step.step} className="step-card">
