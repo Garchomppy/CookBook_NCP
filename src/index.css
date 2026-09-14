@@ -1,10 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Caveat:wght@600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Caveat:wght@600;700&display=swap");
 
 :root {
-  --font-serif: 'Playfair Display', Georgia, serif;
-  --font-body: 'Plus Jakarta Sans', sans-serif;
-  --font-classic: 'Cormorant Garamond', serif;
-  --font-handwriting: 'Caveat', cursive;
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-body: "Plus Jakarta Sans", sans-serif;
+  --font-classic: "Cormorant Garamond", serif;
+  --font-handwriting: "Caveat", cursive;
 
   /* Cozy Vintage Palette */
   --bg-table: #1c1512;
@@ -30,9 +30,19 @@
 body {
   font-family: var(--font-body);
   background-color: var(--bg-table);
-  background-image: 
-    radial-gradient(circle at 50% 50%, rgba(44, 29, 21, 0.8) 0%, rgba(15, 10, 8, 0.95) 100%),
-    repeating-linear-gradient(45deg, rgba(255,255,255,0.01) 0px, rgba(255,255,255,0.01) 2px, transparent 2px, transparent 6px);
+  background-image:
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(44, 29, 21, 0.8) 0%,
+      rgba(15, 10, 8, 0.95) 100%
+    ),
+    repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.01) 0px,
+      rgba(255, 255, 255, 0.01) 2px,
+      transparent 2px,
+      transparent 6px
+    );
   color: var(--ink-black);
   min-height: 100vh;
   overflow-x: hidden;
@@ -116,6 +126,26 @@ body {
   color: #fff;
 }
 
+.nav-btn.bgm-active {
+  background: rgba(212, 163, 89, 0.25);
+  border-color: var(--accent-gold);
+  color: #ffd88a;
+  box-shadow: 0 0 12px rgba(212, 163, 89, 0.35);
+}
+
+.spin-slow {
+  animation: spinSlow 4s linear infinite;
+}
+
+@keyframes spinSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Book Container - GPU Accelerated */
 .book-wrapper {
   position: relative;
@@ -137,12 +167,13 @@ body {
   position: relative;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
-  transform: translateZ(0);
-  will-change: transform, opacity;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  contain: layout paint;
 }
 
 .page-item::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   bottom: 0;
@@ -154,12 +185,20 @@ body {
 /* Spine Shadow Simulation */
 .page-item:nth-child(odd)::before {
   left: 0;
-  background: linear-gradient(to right, rgba(0, 0, 0, 0.12) 0%, transparent 100%);
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.12) 0%,
+    transparent 100%
+  );
 }
 
 .page-item:nth-child(even)::before {
   right: 0;
-  background: linear-gradient(to left, rgba(0, 0, 0, 0.12) 0%, transparent 100%);
+  background: linear-gradient(
+    to left,
+    rgba(0, 0, 0, 0.12) 0%,
+    transparent 100%
+  );
 }
 
 /* Page inner layout */
@@ -190,7 +229,11 @@ body {
 
 /* COVER PAGES */
 .cover-page {
-  background: linear-gradient(135deg, var(--leather-dark) 0%, #20130b 100%) !important;
+  background: linear-gradient(
+    135deg,
+    var(--leather-dark) 0%,
+    #20130b 100%
+  ) !important;
   color: #eedcc3;
   border: 3px solid #8e623f;
   box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.8);
@@ -215,7 +258,7 @@ body {
 }
 
 .cover-border-frame::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 4px;
   border: 1px dashed rgba(212, 163, 89, 0.4);
@@ -255,7 +298,7 @@ body {
   border-radius: 50%;
   border: 3px solid var(--accent-gold);
   padding: 4px;
-  box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
 }
 
 .cover-illustration img {
@@ -835,87 +878,100 @@ body {
   }
 
   .cover-illustration {
-    width: 75px;
-    height: 75px;
-    margin: 8px 0;
+    width: 120px;
+    height: 120px;
+    margin: 12px 0;
   }
 
   .toc-title {
-    font-size: 1.2rem;
+    font-size: 1.25rem;
     margin-bottom: 8px;
     padding-bottom: 4px;
   }
 
   .toc-list {
-    max-height: 320px;
+    max-height: calc(100% - 90px);
+    flex: 1;
     gap: 6px;
+    padding-right: 4px;
+  }
+
+  .toc-item {
+    padding: 5px 6px;
   }
 
   .toc-item-title {
-    font-size: 0.88rem;
+    font-size: 0.9rem;
+  }
+
+  .toc-note-card {
+    margin-top: auto;
+    margin-bottom: 12px;
   }
 
   .section-title {
-    font-size: 0.88rem;
-    margin-bottom: 4px;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
     padding-bottom: 2px;
   }
 
   .ingredients-list {
-    max-height: 90px;
-    margin-bottom: 6px;
-    gap: 2px;
+    max-height: 115px;
+    margin-bottom: 8px;
+    gap: 3px;
   }
 
   .ingredient-item {
-    font-size: 0.72rem;
+    font-size: 0.74rem;
     padding: 1px 0;
   }
 
   .instructions-timeline {
-    max-height: 230px;
-    gap: 8px;
+    max-height: calc(100% - 190px);
     flex: 1;
+    gap: 10px;
+    padding-right: 4px;
   }
 
   .step-card {
-    gap: 6px;
+    gap: 8px;
   }
 
   .step-badge {
-    width: 18px;
-    height: 18px;
-    font-size: 0.68rem;
+    width: 20px;
+    height: 20px;
+    font-size: 0.7rem;
   }
 
   .step-content-title {
-    font-size: 0.78rem;
+    font-size: 0.82rem;
     margin-bottom: 2px;
   }
 
   .step-content-desc {
-    font-size: 0.72rem;
-    line-height: 1.3;
+    font-size: 0.75rem;
+    line-height: 1.35;
   }
 
   .step-bullets {
-    gap: 2px;
+    gap: 3px;
   }
 
   .step-bullet-item {
-    gap: 4px;
-    line-height: 1.25;
+    gap: 5px;
+    line-height: 1.3;
   }
 
   .bullet-dash {
-    font-size: 0.82rem;
+    font-size: 0.85rem;
   }
 
   .chef-note-card {
-    padding: 5px 8px;
-    font-size: 0.74rem;
-    line-height: 1.25;
-    margin-top: 6px;
+    padding: 6px 10px;
+    font-size: 0.76rem;
+    line-height: 1.3;
+    margin-top: auto;
+    margin-bottom: 14px;
   }
 
   .bottom-controls {

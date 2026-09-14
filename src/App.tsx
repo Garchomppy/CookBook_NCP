@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import { recipes } from "./data/recipes";
 import { HTMLFlipBook, type FlipBookRef } from "./components/HTMLFlipBook";
 import coverImage from "./assets/Gemini_Generated_Image_3ean3n3ean3n3ean.png";
+import leFestinBgm from "./assets/Le Festin.mp3";
 import {
   BookOpen,
   ChevronLeft,
@@ -14,6 +15,8 @@ import {
   Flame,
   Volume2,
   VolumeX,
+  Music,
+  Music2,
   X,
 } from "lucide-react";
 import confetti from "canvas-confetti";
@@ -21,15 +24,37 @@ import confetti from "canvas-confetti";
 export const App: React.FC = () => {
   const flipBookRef = useRef<FlipBookRef>(null);
   const [currentPage, setCurrentPage] = useState(0);
+  // Pre-process and memoize recipes with parsed bullet sentences for ultra-fast rendering
+  const memoizedRecipes = React.useMemo(() => {
+    return recipes.map((recipe) => ({
+      ...recipe,
+      instructions: recipe.instructions.map((step) => ({
+        ...step,
+        sentences: step.description
+          .split(/(?<=[.?!])\s+/)
+          .map((s) => s.trim())
+          .filter((s) => s.length > 3),
+      })),
+    }));
+  }, []);
+
   const [checkedIngredients, setCheckedIngredients] = useState<
     Record<string, boolean>
   >({});
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [bgmPlaying, setBgmPlaying] = useState(false);
+  const bgmAudioRef = useRef<HTMLAudioElement | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [bookDimensions, setBookDimensions] = useState({ width: 440, height: 600, isMobile: false });
+  const [bookDimensions, setBookDimensions] = useState({
+    width: 440,
+    height: 600,
+    isMobile: false,
+  });
+
   // Global singleton AudioContext for high performance and zero audio-lag
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const audioBufferRef = useRef<AudioBuffer | null>(null);
 
   // Responsive Book Size calculation with requestAnimationFrame debounce
   React.useEffect(() => {
@@ -45,20 +70,37 @@ export const App: React.FC = () => {
           // Mobile Phone (single portrait page)
           const w = Math.min(windowWidth - 24, 380);
           const h = Math.min(windowHeight - 140, 560);
-          setBookDimensions({ width: w, height: h, isMobile: true });
+          setBookDimensions((prev) =>
+            prev.width === w && prev.height === h && prev.isMobile === true
+              ? prev
+              : { width: w, height: h, isMobile: true },
+          );
         } else if (windowWidth < 1024) {
           // Tablet: 2 pages spread
           const availableWidth = windowWidth - 48;
           const pageW = Math.min(Math.floor(availableWidth / 2), 420);
           const pageH = Math.min(windowHeight - 160, Math.floor(pageW * 1.36));
-          setBookDimensions({ width: pageW, height: pageH, isMobile: false });
+          setBookDimensions((prev) =>
+            prev.width === pageW &&
+            prev.height === pageH &&
+            prev.isMobile === false
+              ? prev
+              : { width: pageW, height: pageH, isMobile: false },
+          );
         } else {
           // Laptop & Desktop: 2 pages spread
           const pageH = Math.min(windowHeight - 180, 620);
           const pageW = Math.floor(pageH / 1.36);
-          setBookDimensions({ width: Math.max(pageW, 400), height: pageH, isMobile: false });
+          const finalW = Math.max(pageW, 400);
+          setBookDimensions((prev) =>
+            prev.width === finalW &&
+            prev.height === pageH &&
+            prev.isMobile === false
+              ? prev
+              : { width: finalW, height: pageH, isMobile: false },
+          );
         }
-      }, 60);
+      }, 100);
     };
 
     handleResize();
@@ -69,8 +111,8 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  // Audio synthesis effect (optimized zero-allocation)
-  const playPageTurnSound = () => {
+  // Pre-generate paper sound buffer once to achieve 0ms latency and 0 CPU overhead
+  const playPageTurnSound = React.useCallback(() => {
     if (!soundEnabled) return;
     try {
       if (!audioCtxRef.current) {
@@ -79,19 +121,28 @@ export const App: React.FC = () => {
         )();
       }
       const audioCtx = audioCtxRef.current;
-      if (audioCtx.state === 'suspended') {
+      if (audioCtx.state === "suspended") {
         audioCtx.resume();
       }
 
-      const bufferSize = Math.floor(audioCtx.sampleRate * 0.08); // 80ms crisp sound
-      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-      const output = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) {
-        output[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.02));
+      if (!audioBufferRef.current) {
+        const bufferSize = Math.floor(audioCtx.sampleRate * 0.07); // 70ms crisp paper sound
+        const buffer = audioCtx.createBuffer(
+          1,
+          bufferSize,
+          audioCtx.sampleRate,
+        );
+        const output = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          output[i] =
+            (Math.random() * 2 - 1) *
+            Math.exp(-i / (audioCtx.sampleRate * 0.018));
+        }
+        audioBufferRef.current = buffer;
       }
 
       const whiteNoise = audioCtx.createBufferSource();
-      whiteNoise.buffer = buffer;
+      whiteNoise.buffer = audioBufferRef.current;
 
       const filter = audioCtx.createBiquadFilter();
       filter.type = "bandpass";
@@ -99,8 +150,11 @@ export const App: React.FC = () => {
       filter.Q.setValueAtTime(1.5, audioCtx.currentTime);
 
       const gainNode = audioCtx.createGain();
-      gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+      gainNode.gain.setValueAtTime(0.18, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(
+        0.01,
+        audioCtx.currentTime + 0.07,
+      );
 
       whiteNoise.connect(filter);
       filter.connect(gainNode);
@@ -110,52 +164,89 @@ export const App: React.FC = () => {
     } catch (e) {
       // Audio context fallback
     }
-  };
+  }, [soundEnabled]);
 
-  const handleFlip = (e: { data: number }) => {
-    setCurrentPage(e.data);
-    playPageTurnSound();
-  };
+  const handleFlip = React.useCallback(
+    (e: { data: number }) => {
+      setCurrentPage(e.data);
+      playPageTurnSound();
+    },
+    [playPageTurnSound],
+  );
 
-  const flipNext = () => {
+  const flipNext = React.useCallback(() => {
     flipBookRef.current?.pageFlip()?.flipNext();
-  };
+  }, []);
 
-  const flipPrev = () => {
+  const flipPrev = React.useCallback(() => {
     flipBookRef.current?.pageFlip()?.flipPrev();
-  };
+  }, []);
 
-  const turnToPage = (pageNum: number) => {
-    flipBookRef.current?.pageFlip()?.turnToPage(pageNum);
-    playPageTurnSound();
-    setSearchOpen(false);
-  };
+  const turnToPage = React.useCallback(
+    (pageNum: number) => {
+      flipBookRef.current?.pageFlip()?.turnToPage(pageNum);
+      playPageTurnSound();
+      setSearchOpen(false);
+    },
+    [playPageTurnSound],
+  );
 
-  const toggleIngredient = (id: string) => {
+  const toggleIngredient = React.useCallback((id: string) => {
     setCheckedIngredients((prev) => ({
       ...prev,
       [id]: !prev[id],
     }));
-  };
+  }, []);
 
-  const handleCelebrate = () => {
+  const handleCelebrate = React.useCallback(() => {
     confetti({
-      particleCount: 50,
+      particleCount: 45,
       spread: 60,
       origin: { y: 0.8 },
       colors: ["#c85a32", "#d4a359", "#5e7055", "#fff4e3"],
     });
-  };
+  }, []);
 
-  const filteredRecipes = recipes.filter(
-    (r) =>
-      r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.vietnameseTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.category.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const toggleBgm = React.useCallback(() => {
+    if (!bgmAudioRef.current) return;
+    if (bgmPlaying) {
+      bgmAudioRef.current.pause();
+      setBgmPlaying(false);
+    } else {
+      bgmAudioRef.current
+        .play()
+        .then(() => {
+          setBgmPlaying(true);
+        })
+        .catch((e) => {
+          console.warn("BGM autoplay policy prevention:", e);
+        });
+    }
+  }, [bgmPlaying]);
+
+  const filteredRecipes = React.useMemo(() => {
+    if (!searchQuery.trim()) return memoizedRecipes;
+    const q = searchQuery.toLowerCase();
+    return memoizedRecipes.filter(
+      (r) =>
+        r.title.toLowerCase().includes(q) ||
+        r.vietnameseTitle.toLowerCase().includes(q) ||
+        r.category.toLowerCase().includes(q),
+    );
+  }, [memoizedRecipes, searchQuery]);
 
   return (
     <div className="app-container">
+      {/* Hidden background audio player */}
+      <audio
+        ref={bgmAudioRef}
+        src={leFestinBgm}
+        loop
+        preload="auto"
+        onPlay={() => setBgmPlaying(true)}
+        onPause={() => setBgmPlaying(false)}
+      />
+
       {/* Top Vintage Bar */}
       <nav className="top-nav">
         <div className="brand-logo">
@@ -166,7 +257,20 @@ export const App: React.FC = () => {
         <div className="nav-actions">
           <button className="nav-btn" onClick={() => setSearchOpen(true)}>
             <Search size={15} />
-            <span>Tìm kiếm công thức</span>
+            <span>Tìm kiếm</span>
+          </button>
+
+          <button
+            className={`nav-btn ${bgmPlaying ? "bgm-active" : ""}`}
+            onClick={toggleBgm}
+            title="Nhạc nền: Le Festin"
+          >
+            {bgmPlaying ? (
+              <Music size={15} className="spin-slow" />
+            ) : (
+              <Music2 size={15} />
+            )}
+            <span>Nhạc: {bgmPlaying ? "Le Festin ♫" : "Tắt"}</span>
           </button>
 
           <button
@@ -174,7 +278,7 @@ export const App: React.FC = () => {
             onClick={() => setSoundEnabled(!soundEnabled)}
           >
             {soundEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
-            <span>Âm thanh: {soundEnabled ? "Bật" : "Tắt"}</span>
+            <span>Âm lật trang: {soundEnabled ? "Bật" : "Tắt"}</span>
           </button>
 
           <button className="nav-btn" onClick={handleCelebrate}>
@@ -258,7 +362,10 @@ export const App: React.FC = () => {
                 })}
               </div>
 
-              <div className="chef-note-card" style={{ marginTop: "auto" }}>
+              <div
+                className="chef-note-card toc-note-card"
+                style={{ marginTop: "auto" }}
+              >
                 <p>
                   💡{" "}
                   <em>
@@ -274,7 +381,7 @@ export const App: React.FC = () => {
           </div>
 
           {/* RECIPE SPREADS (Left: Overview, Photo, Meta, Ingredients | Right: Instructions) */}
-          {recipes.map((recipe, idx) => {
+          {memoizedRecipes.map((recipe, idx) => {
             const pageLeftNum = 2 + idx * 2;
             const pageRightNum = 3 + idx * 2;
 
@@ -285,12 +392,14 @@ export const App: React.FC = () => {
                 className="page-item full-photo-page"
                 data-density="soft"
               >
-                <img 
-                  src={recipe.image} 
-                  alt={recipe.vietnameseTitle} 
-                  className="full-photo-bg" 
+                <img
+                  src={recipe.image}
+                  alt={recipe.vietnameseTitle}
+                  className="full-photo-bg"
+                  loading="lazy"
+                  decoding="async"
                 />
-                
+
                 <div className="full-photo-overlay">
                   <div className="full-photo-header">
                     <span className="recipe-tag">{recipe.category}</span>
@@ -304,7 +413,9 @@ export const App: React.FC = () => {
                         <Clock size={16} className="text-gold-accent" />
                         <div className="meta-pill-text">
                           <span className="meta-pill-label">Thời gian</span>
-                          <span className="meta-pill-value">{recipe.cookTime}</span>
+                          <span className="meta-pill-value">
+                            {recipe.cookTime}
+                          </span>
                         </div>
                       </div>
 
@@ -312,7 +423,9 @@ export const App: React.FC = () => {
                         <Users size={16} className="text-gold-accent" />
                         <div className="meta-pill-text">
                           <span className="meta-pill-label">Khẩu phần</span>
-                          <span className="meta-pill-value">{recipe.servings}</span>
+                          <span className="meta-pill-value">
+                            {recipe.servings}
+                          </span>
                         </div>
                       </div>
 
@@ -320,7 +433,9 @@ export const App: React.FC = () => {
                         <Flame size={16} className="text-gold-accent" />
                         <div className="meta-pill-text">
                           <span className="meta-pill-label">Độ khó</span>
-                          <span className="meta-pill-value">{recipe.difficulty}</span>
+                          <span className="meta-pill-value">
+                            {recipe.difficulty}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -362,7 +477,7 @@ export const App: React.FC = () => {
                               overflow: "hidden",
                               textOverflow: "ellipsis",
                               whiteSpace: "nowrap",
-                              maxWidth: "220px"
+                              maxWidth: "220px",
                             }}
                           >
                             <input
@@ -377,7 +492,7 @@ export const App: React.FC = () => {
                               color: "var(--ink-brown)",
                               fontSize: "0.78rem",
                               whiteSpace: "nowrap",
-                              marginLeft: "6px"
+                              marginLeft: "6px",
                             }}
                           >
                             {ing.amount}
@@ -388,27 +503,23 @@ export const App: React.FC = () => {
                   </ul>
 
                   {/* Instructions Section */}
-                  <h4 className="section-title" style={{ marginTop: '8px' }}>
+                  <h4 className="section-title" style={{ marginTop: "8px" }}>
                     <BookOpen size={16} className="text-amber-700" />
                     <span>Các bước thực hiện</span>
                   </h4>
                   <div className="instructions-timeline">
                     {recipe.instructions.map((step) => {
-                      // Split sentences and render bullet points with '-'
-                      const sentences = step.description
-                        .split(/(?<=[.?!])\s+/)
-                        .map(s => s.trim())
-                        .filter(s => s.length > 3);
-
                       return (
                         <div key={step.step} className="step-card">
                           <span className="step-badge">{step.step}</span>
                           <div style={{ flex: 1 }}>
-                            <div className="step-content-title">{step.title}</div>
+                            <div className="step-content-title">
+                              {step.title}
+                            </div>
                             <div className="step-content-desc">
-                              {sentences.length > 1 ? (
+                              {step.sentences && step.sentences.length > 1 ? (
                                 <ul className="step-bullets">
-                                  {sentences.map((sentence, sIdx) => (
+                                  {step.sentences.map((sentence, sIdx) => (
                                     <li key={sIdx} className="step-bullet-item">
                                       <span className="bullet-dash">–</span>
                                       <span>{sentence}</span>
@@ -448,7 +559,7 @@ export const App: React.FC = () => {
               <span className="cover-badge-top">Lời kết</span>
               <div>
                 <h2 className="cover-title" style={{ fontSize: "1.8rem" }}>
-                  Bữa Cơm Ấm Áp
+                  Bữa Cơm Healthy
                 </h2>
                 <p className="cover-subtitle">
                   Hạnh phúc bắt đầu từ gian bếp nhỏ
@@ -464,8 +575,10 @@ export const App: React.FC = () => {
                   lineHeight: "1.6",
                 }}
               >
-                <p>Cảm ơn bạn đã đồng hành cùng cuốn sách công thức.</p>
-                <p>Chúc bạn luôn có những phút giây nấu ăn an lành!</p>
+                <p>
+                  Cảm ơn Thy đã đồng hành cùng cuốn sách công thức của Chơn.
+                </p>
+                <p>Chúc Thy luôn có những phút giây nấu ăn an lành!</p>
               </div>
 
               <div className="cover-footer">
