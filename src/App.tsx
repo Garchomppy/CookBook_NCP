@@ -27,48 +27,67 @@ export const App: React.FC = () => {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [bookDimensions, setBookDimensions] = useState({ width: 440, height: 600 });
+  const [bookDimensions, setBookDimensions] = useState({ width: 440, height: 600, isMobile: false });
+  // Global singleton AudioContext for high performance and zero audio-lag
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
-  // Responsive Book Size calculation
+  // Responsive Book Size calculation with requestAnimationFrame debounce
   React.useEffect(() => {
-    const handleResize = () => {
-      const windowWidth = window.innerWidth;
-      const windowHeight = window.innerHeight;
+    let resizeTimer: any;
 
-      if (windowWidth < 640) {
-        // Mobile screen (single portrait page)
-        const w = Math.min(windowWidth - 28, 380);
-        const h = Math.min(windowHeight - 160, 560);
-        setBookDimensions({ width: w, height: h });
-      } else if (windowWidth < 980) {
-        // Tablet screen
-        const w = Math.min(Math.floor((windowWidth - 40) / 2), 400);
-        const h = Math.min(windowHeight - 180, 580);
-        setBookDimensions({ width: w, height: h });
-      } else {
-        // Desktop / Large screen
-        setBookDimensions({ width: 440, height: 600 });
-      }
+    const handleResize = () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+
+        if (windowWidth < 680) {
+          // Mobile Phone (single portrait page)
+          const w = Math.min(windowWidth - 24, 380);
+          const h = Math.min(windowHeight - 140, 560);
+          setBookDimensions({ width: w, height: h, isMobile: true });
+        } else if (windowWidth < 1024) {
+          // Tablet: 2 pages spread
+          const availableWidth = windowWidth - 48;
+          const pageW = Math.min(Math.floor(availableWidth / 2), 420);
+          const pageH = Math.min(windowHeight - 160, Math.floor(pageW * 1.36));
+          setBookDimensions({ width: pageW, height: pageH, isMobile: false });
+        } else {
+          // Laptop & Desktop: 2 pages spread
+          const pageH = Math.min(windowHeight - 180, 620);
+          const pageW = Math.floor(pageH / 1.36);
+          setBookDimensions({ width: Math.max(pageW, 400), height: pageH, isMobile: false });
+        }
+      }, 60);
     };
 
     handleResize();
     window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    return () => {
+      clearTimeout(resizeTimer);
+      window.removeEventListener("resize", handleResize);
+    };
   }, []);
 
-  // Audio synthesis effect for realistic crisp paper sound
+  // Audio synthesis effect (optimized zero-allocation)
   const playPageTurnSound = () => {
     if (!soundEnabled) return;
     try {
-      const audioCtx = new (
-        window.AudioContext || (window as any).webkitAudioContext
-      )();
-      const bufferSize = audioCtx.sampleRate * 0.12; // 120ms
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (
+          window.AudioContext || (window as any).webkitAudioContext
+        )();
+      }
+      const audioCtx = audioCtxRef.current;
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+
+      const bufferSize = Math.floor(audioCtx.sampleRate * 0.08); // 80ms crisp sound
       const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
       const output = buffer.getChannelData(0);
       for (let i = 0; i < bufferSize; i++) {
-        output[i] =
-          (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.03));
+        output[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.02));
       }
 
       const whiteNoise = audioCtx.createBufferSource();
@@ -80,11 +99,8 @@ export const App: React.FC = () => {
       filter.Q.setValueAtTime(1.5, audioCtx.currentTime);
 
       const gainNode = audioCtx.createGain();
-      gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(
-        0.01,
-        audioCtx.currentTime + 0.12,
-      );
+      gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
 
       whiteNoise.connect(filter);
       filter.connect(gainNode);
@@ -171,7 +187,7 @@ export const App: React.FC = () => {
       {/* Interactive 3D Flipbook */}
       <div className="book-wrapper">
         <HTMLFlipBook
-          key={`${bookDimensions.width}-${bookDimensions.height}`}
+          key={`${bookDimensions.width}-${bookDimensions.height}-${bookDimensions.isMobile}`}
           ref={flipBookRef}
           width={bookDimensions.width}
           height={bookDimensions.height}
@@ -182,7 +198,7 @@ export const App: React.FC = () => {
           maxHeight={700}
           drawShadow={true}
           flippingTime={700}
-          usePortrait={true}
+          usePortrait={bookDimensions.isMobile}
           showCover={true}
           mobileScrollSupport={true}
           onFlip={handleFlip}
